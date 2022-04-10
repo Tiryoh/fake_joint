@@ -1,0 +1,43 @@
+<launch>
+  <arg name="use_rviz" default="true" />
+  <arg name="use_rqt" default="false" />
+  <arg name="load_robot_description" default="true" />
+  <arg name="ns" default="mycobot" />
+  <arg name="tf_prefix" default="" />
+  
+  <group>
+    <!-- fake_joint_driver_node -->
+    <node name="fake_joint_driver" pkg="fake_joint_driver" type="fake_joint_driver_node" output="screen" />
+    
+    <!-- robot_state_publisher -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true">
+      <param name="tf_prefix" value="$(arg tf_prefix)" />
+    </node>
+
+    <!-- Load and start joint trajecotory controller -->
+    <rosparam file="$(find fake_joint_launch)/config/mycobot_controllers.yaml" command="load" />
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" args="joint_state_controller arm_controller" />
+
+    <!-- Run tests -->
+    <test test-name="hztest" pkg="rostest" type="hztest">
+      <param name="topic" value="joint_states"/>
+      <param name="hz" value="50"/>
+      <param name="hzerror" value="10"/>
+      <param name="test_duration" value="5.0"/>  
+    </test>
+  </group>
+
+  <!-- load robot description  -->
+  <param if="$(arg load_robot_description)" name="robot_description" command="$(find xacro)/xacro '$(find mycobot_description)/urdf/mycobot.urdf.xacro'" />
+
+  <!-- Launch rviz -->
+  <node if="$(arg use_rviz)" name="rviz" pkg="rviz" type="rviz"
+    args="-d $(find fake_joint_launch)/launch/fake_joint_launch.rviz"/>
+
+  <!-- Launch rqt joint_trajectory_controller -->
+  <node if="$(arg use_rqt)" name="rqt" pkg="rqt_gui" type="rqt_gui"
+    args="-s rqt_joint_trajectory_controller.joint_trajectory_controller.JointTrajectoryController"/>
+
+
+
+</launch>
